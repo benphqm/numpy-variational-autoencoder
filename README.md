@@ -61,16 +61,6 @@ We get this through a second term in our loss. The **KL** term penalizes each Ga
 **Why we need sampling:** Because the decoder only ever sees noisy samples, nearby points in latent space must decode to similar images, so the space becomes smooth. After training you can draw s ~ N(0, I) and decode it to generate a new digit.
 
 
-```mermaid
-flowchart LR
-    y["$y \in \mathbb{R}^{784}$"] --> encu["mean encoder"] --> mu["$\mu \in \mathbb{R}^{16}$"]
-    x --> encl["logvar encoder"] --> l["$\ell = \sigma^2 \in \mathbb{R}^{16}$"]
-    mu --> r["$r=\mu + \varepsilon \exp {\ell / 2}$"]
-    l --> s
-    eps["$\varepsilon \sim N(0,1)$"] --> s
-    s --> dec["decoder"] --> yhat["\hat y \in \mathbb{R}^{784}"]
-```
-
 ---
 
 ## Implementation notes
@@ -179,7 +169,7 @@ This has the same distribution, but now $r$ is a differentiable function of $\mu
 
 The local derivatives are
 
-$$\frac{\partial r}{\partial\mu} = I, \qquad \frac{\partial r}{\partial\ell} = \operatorname{diag}\left(\tfrac12\,\varepsilon\odot \exp{\ell/2}\right)$$
+$$\frac{\partial r}{\partial\mu} = I, \qquad \frac{\partial r}{\partial\ell} = \text{diag}\left(\tfrac12\,\varepsilon\odot \exp{\ell/2}\right)$$
 
 
 
