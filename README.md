@@ -51,24 +51,24 @@ Not everything I read, but the sources that I actually used in implementation.
 
 <!-- TODO: template draft, rewrite in your own words. -->
 
-**Autoencoders:** An autoencoder is composed of two neural networks trained to copy their input. The *encoder* squeezes an input (here a 784-pixel MNIST number) into a short vector in a lower-dimensional *latent space* (here 16 numbers), and the *decoder* tries to reconstruct the original image from the lower-dimensional encoding. 
+**Autoencoders:** An autoencoder is composed of two neural networks trained to copy their input. The **encoder** squeezes an input (here a 784-pixel MNIST number) into a short vector in a lower-dimensional **latent space** (here 16 numbers), and the **decoder** tries to reconstruct the original image from the lower-dimensional encoding. 
 
 **What a plain autoencoder is missing:** Nothing controls where the latent dimensional encoding lands. You would think that interpolating over a parameter changes a certain characteristic of the reconstructed number, but an arbitrary point in latent space often decodes to garbage, since training images end up as scattered points with large empty gaps in between. 
 
 **The VAE addition:** Instead of mapping an image to a single point, the encoder outputs two vectors: a mean μ and a log-variance ℓ = log σ², which together describe a small Gaussian cloud around where the image lives. 
-We get this through a second term in our loss. The *KL* term penalizes each Gaussian cloud for drifting from the standard normal N(0, I), making the model find a compromise between reconstruction quality and latent-space organization. A weight β sets the balance.
+We get this through a second term in our loss. The **KL** term penalizes each Gaussian cloud for drifting from the standard normal N(0, I), making the model find a compromise between reconstruction quality and latent-space organization. A weight β sets the balance.
 
 **Why we need sampling:** Because the decoder only ever sees noisy samples, nearby points in latent space must decode to similar images, so the space becomes smooth. After training you can draw s ~ N(0, I) and decode it to generate a new digit.
 
 
 ```mermaid
 flowchart LR
-    x["x (784)"] --> encu["mean encoder"] --> mu["μ (16)"]
-    x --> encl["logvar encoder"] --> l["ℓ = log σ² (16)"]
-    mu --> s["s = μ + ε·exp(ℓ/2)"]
+    y["$y \in \mathbb{R}^{784}$"] --> encu["mean encoder"] --> mu["$\mu \in \mathbb{R}^{16}$"]
+    x --> encl["logvar encoder"] --> l["$\ell = \sigma^2 \in \mathbb{R}^{16}$"]
+    mu --> r["$r=\mu + \varepsilon \exp {\ell / 2}$"]
     l --> s
-    eps["ε ~ N(0,1)"] --> s
-    s --> dec["decoder"] --> xhat["x̂ (784)"]
+    eps["$\varepsilon \sim N(0,1)$"] --> s
+    s --> dec["decoder"] --> yhat["\hat y \in \mathbb{R}^{784}"]
 ```
 
 ---
@@ -93,7 +93,7 @@ where $f$ is an nonlinearity (sigmoid, ReLU, softmax, etc). The loss $C$ depends
 
 **Last layer.** Take a sigmoid output $\hat y = \sigma(z^{(L)})$ and the loss $C = \frac12\sum_i(\hat y_i - y_i)^2$. Then $\frac{\partial C}{\partial \hat y} = \hat y - y$, and because the sigmoid acts elementwise, its Jacobian is diagonal ($\frac{\partial \sigma_i}{\partial z_j} = 0$):
 
-$$\frac{\partial \hat y}{\partial z^{(L)}} = \operatorname{diag}\big(\hat y(1-\hat y)\big)$$
+$$\frac{\partial \hat y}{\partial z^{(L)}} = \text{diag}\big(\hat y(1-\hat y)\big)$$
 
 A diagonal matrix times a vector is just an elementwise product, so
 
@@ -150,13 +150,13 @@ The reconstruction error obviously depends on $\hat y$, but it also depends on t
 
 The KL divergence between the encoder's Gaussian $N(\mu, \sigma^2)$ and the standard normal has a closed form. Summed over the latent dimensions $d$, with $\ell = \log\sigma^2$:
 
-$$\mathrm{KL}(\mu, \ell) = -\frac12\sum_d\left(1 + \ell_d - \mu_d^2 - \exp{\ell_d}\right)$$
+$$\mathrm{KL}(\mu, \ell) = -\frac12\sum_d\left(1 + \ell_d - \mu_d^2 - \exp \ {\ell_d}\right)$$
 
 <!-- TODO: link the source for this derivation. Too long to reproduce here. -->
 
 
 
-$$\frac{\partial\,\mathrm{KL}}{\partial\mu} = \mu, \qquad \frac{\partial\,\mathrm{KL}}{\partial\ell} = \frac12\left(\exp\ell - 1\right)$$
+$$\frac{\partial\,\mathrm{KL}}{\partial\mu} = \mu, \qquad \frac{\partial\,\mathrm{KL}}{\partial\ell} = \frac12\left(\exp \ \ell - 1\right)$$
 
 Total loss function dependencies: 
 
