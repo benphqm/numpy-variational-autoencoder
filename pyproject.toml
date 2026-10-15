@@ -11,13 +11,13 @@ dependencies = [
     "ipykernel>=7.4.0",
     "matplotlib>=3.11.2",
     "numpy>=2.5.3",
-    "scikit-learn>=1.9.1",
-    "tensorflow>=2.21.0",
+    "torch>=2.14.1",
+    "torchvision>=0.29.1",
     "tqdm>=4.70.1",
 ]
 
 [project.scripts]
-numpy-sae = "numpy_sae:main"
+numpy-sae = "numpy_vae:main"
 
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]

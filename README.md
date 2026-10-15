@@ -187,6 +187,52 @@ $$\frac{\partial r}{\partial\mu} = I, \qquad \frac{\partial r}{\partial\ell} = \
 - 2D PCA of the 16-d latent means, colored by digit label
 -->
 
+
+*Since NumPy CPU compute is expensive in this economy, I used torch to find a decent model architecture and recreated it with my code
+
+**Architecture: 784->256->64->8 with symmetric encoder/decoder**
+<table>
+  <tr>
+    <td align="center">
+      <img src="/assets/latent-space-organizing.png" width="300" alt="First image">
+      <br>
+      <em>latent space organizing ... (β = 0.00006, one epoch)</em>
+    </td>
+    <td align="center">
+      <img src="/assets/latent-space-organized.png" width="300" alt="Second image">
+      <br>
+      <em>Done! (seven epochs)</em>
+    </td>
+  </tr>
+</table>
+
+
+
+
+### Relationship between two loss objectives
+**Reconstruction and KL loss are linearly related?** When training on my first model (784->128->16, with a symmetric encoder/decoder), I found that raw reconstruction and KL loss observed an approximate linear relationship for a majority of the training duration, in which depending on the value of $\beta$, our reconstruction term seemed to be limited to 400-600, with the KL penalty minimum varying more than the reconstruction term. 
+<table>
+  <tr>
+    <td align="center">
+      <img src="/assets/loss-scatter-b0.01.png" width="300" alt="First image">
+      <br>
+      <em>Relationship between KL and L2 loss is mostly linear</em>
+    </td>
+    <td align="center">
+      <img src="/assets/loss-scatter-b0.50.png" width="300" alt="Second image">
+      <br>
+      <em>Model can spontaneously discover new minima, but has trouble leaving them</em>
+    </td>
+  </tr>
+</table>
+Interestingly, I observed a run with a relatively large  $\beta=0.5$ (above, right) which after five epochs or so, the same model found a new local minimum that greatly reduced the KL penalty, but after several more epochs of training it was unable to escape this one. 
+This suggests that the observed linear relationship may also reflect the dynamics of the optimizer rather than solely being an intrinsic relationship between the KL-reconstruction trade off. When NumPy parameters were grafted into an identically designed torch model (see below), further training there still could not reduce loss, and the linear relationship was observed once again, so we could have just gotten lucky. 
+
+
+### Diagnosis of training issues with Torch
+-  **Identical torch models achieve similar loss:** After my first few NumPy models experienced loss plateaus, I checked whether my backpropagation algorithm was incorrectly set up by grafting all weight matrices from the NumPy model into a torch model of identical architecture. I found that these grafted models could not decrease past the parameter minimizers found by my models (four different architectures of varying sizes tested), indicating that loss plateaus were an issue of the model complexity or Adam itself, not my algorithm. 
+- **Torch models don't necesarilly find similar solutions:** Running torch models from scratch on my first default architecture (hidden layer 128, latent layer 16), found that training identical models from different starting weights resulted in modestly different solutions when trained on the exact same batch split and loss-matched for six epochs, while grafting NumPy weights to the torch model and doing identical training found very small weight differences, which are possibly explained by datatype accuracy differences (numpy uses .float64 by default, torch uses .float32). For example, our default architecture had a mean normalized Frobenius of 0.37 for training from default initialized weights vs 0.06 for identical grafted starting weights. Similar results were found for other architectures. 
+
 ---
 
 ## Discussion
@@ -220,7 +266,9 @@ Torch optimizers save their current info in `state_dict`. By coincedence, I save
 
 ### Invalid inputs, clipping, and overflow
 This may have taken more time than the backprop logic itself.
-- **Overflow:** $\exp{\ell/2}$ in the reparameterization (and its gradient), and $\exp{-z}$ in the sigmoid caused overflow during forward/backward. Matrix weights were initialized uniformly on $[-1,1]$, but I realized that this caused early passes to explode. I eventually cut them down to $[-1e^{-6}, 1e^{-6}]$, but I should have done torch's approach of initializing based on the input dimensionality. 
+- **Overflow:** $\exp{\ell/2}$ in the reparameterization (and its gradient), and $\exp{-z}$ in the sigmoid caused overflow during forward/backward. Matrix weights were initialized uniformly on $[-1,1]$, but I realized that this caused early passes to explode. I eventually cut them down to $[-1e^{-6}, 1e^{-6}]$, which was overly small, causing the model to send gradients to zero when I added layers with large (input,output) differences (e.g 64->2). Torch's documentation for `nn.linear` said that it initializes weights using the formula $\sqrt{\frac{1}{\text{input dim}}}$, so I copied this. (I wasted a large amount of time checking my backprop logic when it was initialization... they never made a point about the importance of 'initializing with random weights' in class, )
+
+
 - I ended the $\ell$ generator on a sigmoid for a while before I realized that reconstruction loss wants $\ell \rightarrow -\infty$. Loss plateaud in a local minimum where the network would reconstruct a ['mean number'](assets/mean-shape.png) from every example. 
 - Real implementations will either clip outputs/gradients or use a stabilizer like BatchNorm before passing $z$ into the nonlinearity. 
 

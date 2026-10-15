@@ -1,5 +1,5 @@
 .python-version
-/models
-/assets
-notes.txt
-dev.ipynb
+diagnostics.ipynb
+/data
+random-functionalities.ipynb
+notes
